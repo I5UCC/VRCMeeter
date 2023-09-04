@@ -1,0 +1,8 @@
+{
+    "ip": "127.0.0.1",
+    "port": 9000,
+    "server_port": 0,
+    "http_port": 0,
+    "voicemeeter_type": "potato",
+    "strips": [5, 6, 7]
+}
