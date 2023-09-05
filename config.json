@@ -3,6 +3,8 @@
     "port": 9000,
     "server_port": 0,
     "http_port": 0,
+    "min_gain": -60,
+    "max_gain": 0,
     "voicemeeter_type": "potato",
     "strips": [5, 6, 7]
 }
