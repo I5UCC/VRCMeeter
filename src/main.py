@@ -2,15 +2,15 @@ import voicemeeter
 import json
 import os
 import sys
+import time
+import traceback
+import ctypes
+import zeroconf
 from pythonosc import dispatcher, osc_server, udp_client
 from tinyoscquery.queryservice import OSCQueryService
 from tinyoscquery.utility import get_open_tcp_port, get_open_udp_port, check_if_tcp_port_open, check_if_udp_port_open
 from tinyoscquery.query import OSCQueryBrowser, OSCQueryClient
 from psutil import process_iter
-import time
-import traceback
-import ctypes
-import zeroconf
 from threading import Thread, Timer
 
 
