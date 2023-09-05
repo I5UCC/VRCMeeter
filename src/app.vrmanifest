@@ -1,0 +1,18 @@
+{
+	"source": "builtin",
+	"applications": [
+		{
+			"app_key": "i5ucc.VRCVoiceMeeterControl",
+			"launch_type": "binary",
+			"binary_path_windows": "./VRCVoiceMeeterControl_NoConsole.exe",
+			"is_dashboard_overlay": true,
+
+			"strings": {
+				"en_us": {
+					"name": "VRCVoiceMeeterControl",
+					"description": "Lets you control Voicemeeter from within VRChat over OSC"
+				}
+			}
+		}
+	]
+}

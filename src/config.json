@@ -6,5 +6,6 @@
     "min_gain": -60,
     "max_gain": 0,
     "voicemeeter_type": "potato",
-    "strips": [5, 6, 7]
+    "strips_in": [],
+    "strips_out": []
 }

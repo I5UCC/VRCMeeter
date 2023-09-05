@@ -79,25 +79,30 @@ def wait_get_oscquery_client():
 
 
 def set_gain_variable(addr, value):
-    global gains, changed
+    global gains_in, changed
     strip = int(addr.split('_')[-1])
     gain = get_voicemeeter_gain_from_float(float(value))
-    gains[strip] = round(gain, 1)
+    gains_in[strip] = round(gain, 1)
     changed = True
 
 
 def set_gains():
     global changed
-    global vmr, gains
+    global vmr, gains_in
 
     if not changed:
         return
 
-    for strip in STRIPS:
-        if round(vmr.inputs[strip].gain, 1) == gains[strip]:
+    for strip in STRIPS_IN:
+        if round(vmr.inputs[strip].gain, 1) == gains_in[strip]:
             continue
-        print(f"Setting gain for strip {strip} to {gains[strip]}")
-        vmr.inputs[strip].gain = gains[strip]
+        print(f"Setting gain for strip {strip} to {gains_in[strip]}")
+        vmr.inputs[strip].gain = gains_in[strip]
+    for strip in STRIPS_OUT:
+        if round(vmr.outputs[strip].gain, 1) == gains_out[strip]:
+            continue
+        print(f"Setting gain for strip {strip} to {gains_out[strip]}")
+        vmr.outputs[strip].gain = gains_out[strip]
     changed = False
 
 
@@ -106,8 +111,10 @@ def avatar_change(addr, value):
 
     print("Avatar changed/reset...")
 
-    for strip in STRIPS:
-        osc_client.send_message(f"{PARAMETER_PREFIX}vm_gain_{strip}", get_float_from_voicemeeter_gain(vmr.inputs[strip].gain))
+    for strip in STRIPS_IN:
+        osc_client.send_message(f"{PARAMETER_PREFIX_IN}{strip}", get_float_from_voicemeeter_gain(vmr.inputs[strip].gain))
+    for strip in STRIPS_OUT:
+        osc_client.send_message(f"{PARAMETER_PREFIX_OUT}{strip}", get_float_from_voicemeeter_gain(vmr.outputs[strip].gain))
 
 
 def osc_server_serve():
@@ -116,20 +123,27 @@ def osc_server_serve():
 
 
 def main():
-    global osc_client, vmr, server, server_thread, qclient, oscqs, update_timer, gains
+    global osc_client, vmr, server, server_thread, qclient, oscqs, update_timer, gains_in
     vmr = voicemeeter.remote(KIND)
     vmr.login()
 
-    for strip in STRIPS:
-        gains[strip] = round(vmr.inputs[strip].gain, 1)
+    for strip in STRIPS_IN:
+        gains_in[strip] = round(vmr.inputs[strip].gain, 1)
+        print(f"Strip {strip} gain: {gains_in[strip]}")
+    for strip in STRIPS_OUT:
+        gains_out[strip] = round(vmr.outputs[strip].gain, 1)
+        print(f"Strip {strip} gain: {gains_out[strip]}")
 
     osc_client = udp_client.SimpleUDPClient(OSC_SERVER_IP, OSC_CLIENT_PORT)
 
     disp = dispatcher.Dispatcher()
     disp.map(AVATAR_CHANGE_PARAMETER, avatar_change)
-    for strip in STRIPS:
-        disp.map(f"{PARAMETER_PREFIX}vm_gain_{strip}", set_gain_variable)
-        print(f"Bound to {PARAMETER_PREFIX}vm_gain_{strip}")
+    for strip in STRIPS_IN:
+        disp.map(f"{PARAMETER_PREFIX_IN}{strip}", set_gain_variable)
+        print(f"Bound to {PARAMETER_PREFIX_IN}{strip}")
+    for strip in STRIPS_OUT:
+        disp.map(f"{PARAMETER_PREFIX_OUT}{strip}", set_gain_variable)
+        print(f"Bound to {PARAMETER_PREFIX_OUT}{strip}")
 
     server = osc_server.ThreadingOSCUDPServer((OSC_SERVER_IP, OSC_SERVER_PORT), disp)
     server_thread = Thread(target=osc_server_serve, daemon=True)
@@ -142,8 +156,10 @@ def main():
     qclient = wait_get_oscquery_client()
     oscqs = OSCQueryService("VoicemeeterControl", HTTP_PORT, OSC_SERVER_PORT)
     oscqs.advertise_endpoint(AVATAR_CHANGE_PARAMETER, access="readwrite")
-    for strip in STRIPS:
-        oscqs.advertise_endpoint(f"{PARAMETER_PREFIX}vm_gain_{strip}", access="readwrite")
+    for strip in STRIPS_IN:
+        oscqs.advertise_endpoint(f"{PARAMETER_PREFIX_IN}{strip}", access="readwrite")
+    for strip in STRIPS_OUT:
+        oscqs.advertise_endpoint(f"{PARAMETER_PREFIX_OUT}{strip}", access="readwrite")
 
     avatar_change(None, None)
 
@@ -167,9 +183,10 @@ def exit():
         oscqs.stop()
     sys.exit(0)
 
-conf = json.load(open('config.json'))
+conf = json.load(open(get_absolute_path('config.json')))
 changed = False
-gains = {}
+gains_in = {}
+gains_out = {}
 osc_client: udp_client.SimpleUDPClient = None
 vmr: voicemeeter.remote = None
 server: osc_server.ThreadingOSCUDPServer = None
@@ -179,7 +196,8 @@ oscqs: OSCQueryService = None
 update_timer: RepeatedTimer = None
 
 KIND = conf['voicemeeter_type']
-STRIPS = conf['strips']
+STRIPS_IN = conf['strips_in']
+STRIPS_OUT = conf['strips_out']
 OSC_CLIENT_PORT = conf["port"]
 OSC_SERVER_PORT = conf['server_port']
 OSC_SERVER_IP = conf['ip']
@@ -187,7 +205,32 @@ HTTP_PORT = conf['http_port']
 MIN_GAIN = conf['min_gain']
 MAX_GAIN = conf['max_gain']
 AVATAR_CHANGE_PARAMETER = "/avatar/change"
-PARAMETER_PREFIX = "/avatar/parameters/"
+PARAMETER_PREFIX_IN = "/avatar/parameters/vm_in_gain_"
+PARAMETER_PREFIX_OUT = "/avatar/parameters/vm_out_gain_"
+
+if len(STRIPS_IN) == 0:
+    match KIND:
+        case "basic":
+            STRIPS_IN = [0, 1, 2]
+        case "banana":
+            STRIPS_IN = [0, 1, 2, 3, 4]
+        case "potato":
+            STRIPS_IN = [0, 1, 2, 3, 4, 5, 6, 7]
+
+if len(STRIPS_IN) == 1 and STRIPS_IN[0] == -1:
+    STRIPS_IN = {}
+
+if len(STRIPS_OUT) == 0:
+     match KIND:
+        case "basic":
+            STRIPS_OUT = [0, 1]
+        case "banana":
+            STRIPS_OUT = [0, 1, 2, 3, 4]
+        case "potato":
+            STRIPS_OUT = [0, 1, 2, 3, 4, 5, 6, 7]
+
+if len(STRIPS_OUT) == 1 and STRIPS_OUT[0] == -1:
+    STRIPS_OUT = {}
 
 if OSC_SERVER_PORT != 9001:
     print("OSC Server port is not default, testing port availability and advertising OSCQuery endpoints")
