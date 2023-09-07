@@ -105,6 +105,12 @@ def set_gains():
         vmr.outputs[strip].gain = gains_out[strip]
     changed = False
 
+def set_profile(addr, value):
+    global vmr
+    profile = int(addr.split('_')[-1])
+    print(f"Setting profile to {profile}")
+    vmr.apply_profile(PROFILES[profile])
+
 
 def avatar_change(addr, value):
     global vmr
@@ -112,65 +118,14 @@ def avatar_change(addr, value):
     print("Avatar changed/reset...")
 
     for strip in STRIPS_IN:
-        osc_client.send_message(f"{PARAMETER_PREFIX_IN}{strip}", get_float_from_voicemeeter_gain(vmr.inputs[strip].gain))
+        osc_client.send_message(f"{PARAMETER_PREFIX_IN}gain_{strip}", get_float_from_voicemeeter_gain(vmr.inputs[strip].gain))
     for strip in STRIPS_OUT:
-        osc_client.send_message(f"{PARAMETER_PREFIX_OUT}{strip}", get_float_from_voicemeeter_gain(vmr.outputs[strip].gain))
+        osc_client.send_message(f"{PARAMETER_PREFIX_OUT}gain_{strip}", get_float_from_voicemeeter_gain(vmr.outputs[strip].gain))
 
 
 def osc_server_serve():
     print(f"Starting OSC client on {OSC_SERVER_IP}:{OSC_SERVER_PORT}:{HTTP_PORT}\n")
     server.serve_forever(2)
-
-
-def main():
-    global osc_client, vmr, server, server_thread, qclient, oscqs, update_timer, gains_in
-    vmr = voicemeeter.remote(KIND)
-    vmr.login()
-
-    for strip in STRIPS_IN:
-        gains_in[strip] = round(vmr.inputs[strip].gain, 1)
-        print(f"Strip {strip} gain: {gains_in[strip]}")
-    for strip in STRIPS_OUT:
-        gains_out[strip] = round(vmr.outputs[strip].gain, 1)
-        print(f"Strip {strip} gain: {gains_out[strip]}")
-
-    osc_client = udp_client.SimpleUDPClient(OSC_SERVER_IP, OSC_CLIENT_PORT)
-
-    disp = dispatcher.Dispatcher()
-    disp.map(AVATAR_CHANGE_PARAMETER, avatar_change)
-    for strip in STRIPS_IN:
-        disp.map(f"{PARAMETER_PREFIX_IN}{strip}", set_gain_variable)
-        print(f"Bound to {PARAMETER_PREFIX_IN}{strip}")
-    for strip in STRIPS_OUT:
-        disp.map(f"{PARAMETER_PREFIX_OUT}{strip}", set_gain_variable)
-        print(f"Bound to {PARAMETER_PREFIX_OUT}{strip}")
-
-    server = osc_server.ThreadingOSCUDPServer((OSC_SERVER_IP, OSC_SERVER_PORT), disp)
-    server_thread = Thread(target=osc_server_serve, daemon=True)
-    server_thread.start()
-
-    print("Waiting for VRChat to start.")
-    while not is_vrchat_running():
-        time.sleep(3)
-    print("VRChat started!")
-    qclient = wait_get_oscquery_client()
-    oscqs = OSCQueryService("VoicemeeterControl", HTTP_PORT, OSC_SERVER_PORT)
-    oscqs.advertise_endpoint(AVATAR_CHANGE_PARAMETER, access="readwrite")
-    for strip in STRIPS_IN:
-        oscqs.advertise_endpoint(f"{PARAMETER_PREFIX_IN}{strip}", access="readwrite")
-    for strip in STRIPS_OUT:
-        oscqs.advertise_endpoint(f"{PARAMETER_PREFIX_OUT}{strip}", access="readwrite")
-
-    avatar_change(None, None)
-
-    update_timer = RepeatedTimer(0.3, set_gains)
-    update_timer.start()
-    
-    while is_vrchat_running():
-        time.sleep(3)
-
-    print("VRChat closed, exiting.")
-    exit()
 
 
 def exit():
@@ -198,6 +153,7 @@ update_timer: RepeatedTimer = None
 KIND = conf['voicemeeter_type']
 STRIPS_IN = conf['strips_in']
 STRIPS_OUT = conf['strips_out']
+PROFILES = conf['profiles']
 OSC_CLIENT_PORT = conf["port"]
 OSC_SERVER_PORT = conf['server_port']
 OSC_SERVER_IP = conf['ip']
@@ -205,32 +161,9 @@ HTTP_PORT = conf['http_port']
 MIN_GAIN = conf['min_gain']
 MAX_GAIN = conf['max_gain']
 AVATAR_CHANGE_PARAMETER = "/avatar/change"
-PARAMETER_PREFIX_IN = "/avatar/parameters/vm_in_gain_"
-PARAMETER_PREFIX_OUT = "/avatar/parameters/vm_out_gain_"
-
-if len(STRIPS_IN) == 0:
-    match KIND:
-        case "basic":
-            STRIPS_IN = [0, 1, 2]
-        case "banana":
-            STRIPS_IN = [0, 1, 2, 3, 4]
-        case "potato":
-            STRIPS_IN = [0, 1, 2, 3, 4, 5, 6, 7]
-
-if len(STRIPS_IN) == 1 and STRIPS_IN[0] == -1:
-    STRIPS_IN = {}
-
-if len(STRIPS_OUT) == 0:
-     match KIND:
-        case "basic":
-            STRIPS_OUT = [0, 1]
-        case "banana":
-            STRIPS_OUT = [0, 1, 2, 3, 4]
-        case "potato":
-            STRIPS_OUT = [0, 1, 2, 3, 4, 5, 6, 7]
-
-if len(STRIPS_OUT) == 1 and STRIPS_OUT[0] == -1:
-    STRIPS_OUT = {}
+PARAMETER_RESTART = "/avatar/parameters/vm_restart"
+PARAMETER_PREFIX_IN = "/avatar/parameters/vm_in_"
+PARAMETER_PREFIX_OUT = "/avatar/parameters/vm_out_"
 
 if OSC_SERVER_PORT != 9001:
     print("OSC Server port is not default, testing port availability and advertising OSCQuery endpoints")
@@ -241,8 +174,76 @@ if OSC_SERVER_PORT != 9001:
 else:
     print("OSC Server port is default.")
 
+vmr = voicemeeter.remote(KIND)
+vmr.login()
+
+if STRIPS_IN is None or len(STRIPS_IN) == 1 and STRIPS_IN[0] == -1:
+    STRIPS_IN = {}
+elif len(STRIPS_IN) == 0:
+    STRIPS_IN = [i for i in range(len(vmr.inputs))]
+
+if STRIPS_OUT is None or len(STRIPS_OUT) == 1 and STRIPS_OUT[0] == -1:
+    STRIPS_OUT = {}
+elif len(STRIPS_OUT) == 0:
+    STRIPS_OUT = [i for i in range(len(vmr.outputs))]
+
 try:
-    main()
+    for strip in STRIPS_IN:
+        gains_in[strip] = round(vmr.inputs[strip].gain, 1)
+        print(f"Strip {strip} gain: {gains_in[strip]}")
+    for strip in STRIPS_OUT:
+        gains_out[strip] = round(vmr.outputs[strip].gain, 1)
+        print(f"Strip {strip} gain: {gains_out[strip]}")
+
+    osc_client = udp_client.SimpleUDPClient(OSC_SERVER_IP, OSC_CLIENT_PORT)
+
+    disp = dispatcher.Dispatcher()
+    disp.map(AVATAR_CHANGE_PARAMETER, avatar_change)
+    disp.map(PARAMETER_RESTART, vmr.restart)
+    print(f"Bound to {PARAMETER_RESTART}")
+    for i in range(len(PROFILES)):
+        disp.map(f"{PARAMETER_PREFIX_IN}profile_{i}", set_profile)
+        print(f"Bound to {PARAMETER_PREFIX_IN}profile_{i}")
+
+    for strip in STRIPS_IN:
+        disp.map(f"{PARAMETER_PREFIX_IN}gain_{strip}", set_gain_variable)
+        print(f"Bound to {PARAMETER_PREFIX_IN}gain_{strip}")
+
+    for strip in STRIPS_OUT:
+        disp.map(f"{PARAMETER_PREFIX_OUT}gain_{strip}", set_gain_variable)
+        print(f"Bound to {PARAMETER_PREFIX_OUT}gain_{strip}")
+
+    server = osc_server.ThreadingOSCUDPServer((OSC_SERVER_IP, OSC_SERVER_PORT), disp)
+    server_thread = Thread(target=osc_server_serve, daemon=True)
+    server_thread.start()
+
+    print("Waiting for VRChat to start.")
+    while not is_vrchat_running():
+        time.sleep(5)
+    print("VRChat started!")
+    qclient = wait_get_oscquery_client()
+    oscqs = OSCQueryService("VoicemeeterControl", HTTP_PORT, OSC_SERVER_PORT)
+    oscqs.advertise_endpoint(AVATAR_CHANGE_PARAMETER, access="readwrite")
+    for i in range(len(PROFILES)):
+        oscqs.advertise_endpoint(f"{PARAMETER_PREFIX_IN}profile_{i}", access="readwrite")
+
+    for strip in STRIPS_IN:
+        oscqs.advertise_endpoint(f"{PARAMETER_PREFIX_IN}gain_{strip}", access="readwrite")
+
+    for strip in STRIPS_OUT:
+        oscqs.advertise_endpoint(f"{PARAMETER_PREFIX_OUT}gain_{strip}", access="readwrite")
+
+
+    avatar_change(None, None)
+
+    update_timer = RepeatedTimer(0.3, set_gains)
+    update_timer.start()
+    
+    while is_vrchat_running():
+        time.sleep(5)
+
+    print("VRChat closed, exiting.")
+    exit()
 except OSError as e:
     if os.name == "nt":
         ctypes.windll.user32.MessageBoxW(0, "You can only bind to the port 9001 once.", "VRCVoiceMeeterControl - Error", 0)

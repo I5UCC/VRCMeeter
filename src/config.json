@@ -7,5 +7,6 @@
     "max_gain": 0,
     "voicemeeter_type": "potato",
     "strips_in": [],
-    "strips_out": []
+    "strips_out": [],
+    "profiles": ["VR.xml"]
 }
