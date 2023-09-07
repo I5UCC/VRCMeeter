@@ -110,7 +110,7 @@ def set_profile(addr, value):
     global vmr
     profile = int(addr.split('_')[-1])
     print(f"Setting profile to {PROFILES[profile]}")
-    vmr.apply_profile(PROFILES[profile])
+    vmr.apply_profile(get_absolute_path(PROFILES[profile]))
 
 
 def avatar_change(addr, value):
