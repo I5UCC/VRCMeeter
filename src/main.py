@@ -105,10 +105,11 @@ def set_gains():
         vmr.outputs[strip].gain = gains_out[strip]
     changed = False
 
+
 def set_profile(addr, value):
     global vmr
     profile = int(addr.split('_')[-1])
-    print(f"Setting profile to {profile}")
+    print(f"Setting profile to {PROFILES[profile]}")
     vmr.apply_profile(PROFILES[profile])
 
 
@@ -174,8 +175,14 @@ if OSC_SERVER_PORT != 9001:
 else:
     print("OSC Server port is default.")
 
-vmr = voicemeeter.remote(KIND)
-vmr.login()
+try:
+    vmr = voicemeeter.remote(KIND)
+    vmr.login()
+except Exception as e:
+    if os.name == "nt":
+        ctypes.windll.user32.MessageBoxW(0, traceback.format_exc(), "VRCVoiceMeeterControl - Error", 0)
+    print(traceback.format_exc())
+    exit()
 
 if STRIPS_IN is None or len(STRIPS_IN) == 1 and STRIPS_IN[0] == -1:
     STRIPS_IN = {}
@@ -187,19 +194,19 @@ if STRIPS_OUT is None or len(STRIPS_OUT) == 1 and STRIPS_OUT[0] == -1:
 elif len(STRIPS_OUT) == 0:
     STRIPS_OUT = [i for i in range(len(vmr.outputs))]
 
-try:
-    for strip in STRIPS_IN:
-        gains_in[strip] = round(vmr.inputs[strip].gain, 1)
-        print(f"Strip {strip} gain: {gains_in[strip]}")
-    for strip in STRIPS_OUT:
-        gains_out[strip] = round(vmr.outputs[strip].gain, 1)
-        print(f"Strip {strip} gain: {gains_out[strip]}")
+for strip in STRIPS_IN:
+    gains_in[strip] = round(vmr.inputs[strip].gain, 1)
+    print(f"Strip {strip} gain: {gains_in[strip]}")
+for strip in STRIPS_OUT:
+    gains_out[strip] = round(vmr.outputs[strip].gain, 1)
+    print(f"Strip {strip} gain: {gains_out[strip]}")
 
+try:
     osc_client = udp_client.SimpleUDPClient(OSC_SERVER_IP, OSC_CLIENT_PORT)
 
     disp = dispatcher.Dispatcher()
     disp.map(AVATAR_CHANGE_PARAMETER, avatar_change)
-    disp.map(PARAMETER_RESTART, vmr.restart)
+    disp.map(PARAMETER_RESTART, lambda addr, value: vmr.restart())
     print(f"Bound to {PARAMETER_RESTART}")
     for i in range(len(PROFILES)):
         disp.map(f"{PARAMETER_PREFIX_IN}profile_{i}", set_profile)
@@ -224,6 +231,7 @@ try:
     qclient = wait_get_oscquery_client()
     oscqs = OSCQueryService("VoicemeeterControl", HTTP_PORT, OSC_SERVER_PORT)
     oscqs.advertise_endpoint(AVATAR_CHANGE_PARAMETER, access="readwrite")
+    oscqs.advertise_endpoint(PARAMETER_RESTART, access="readwrite")
     for i in range(len(PROFILES)):
         oscqs.advertise_endpoint(f"{PARAMETER_PREFIX_IN}profile_{i}", access="readwrite")
 
