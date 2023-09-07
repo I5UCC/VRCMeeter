@@ -127,6 +127,10 @@ class VMRemote(abc.ABC):
         """ Restarts Voicemeeter's audio engine. """
         self.set('Command.Restart', 1)
 
+    def load(self, preset):
+        """ Loads a preset saved by Voicemeeter. """
+        self.set('Command.Load', preset)
+
     def apply(self, mapping):
         """ Sets all parameters of a dict. """
         for key, submapping in mapping.items():
