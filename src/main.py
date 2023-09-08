@@ -203,10 +203,8 @@ elif len(STRIPS_OUT) == 0:
 
 for strip in STRIPS_IN:
     gains_in[strip] = round(vmr.inputs[strip].gain, 1)
-    print(f"Strip {strip} gain: {gains_in[strip]}")
 for strip in STRIPS_OUT:
     gains_out[strip] = round(vmr.outputs[strip].gain, 1)
-    print(f"Strip {strip} gain: {gains_out[strip]}")
 
 try:
     osc_client = udp_client.SimpleUDPClient(OSC_SERVER_IP, OSC_CLIENT_PORT)
@@ -217,21 +215,21 @@ try:
     print(f"Bound to {PARAMETER_RESTART}")
     for i in range(len(PROFILES)):
         disp.map(f"{PARAMETER_PREFIX_IN}profile_{i}", lambda addr, value: set_profile(int(addr.split('_')[-1]), value))
-        print(f"Bound to {PARAMETER_PREFIX_IN}profile_{i}")
+        print(f"Bound profile {PROFILES[i]} to {PARAMETER_PREFIX_IN}profile_{i}")
 
     for strip in STRIPS_IN:
         disp.map(f"{PARAMETER_PREFIX_IN}gain_{strip}", set_gain_variable)
-        print(f"Bound to {PARAMETER_PREFIX_IN}gain_{strip}")
+        print(f"Bound IN-{strip} to {PARAMETER_PREFIX_IN}gain_{strip}")
 
     for strip in STRIPS_OUT:
         disp.map(f"{PARAMETER_PREFIX_OUT}gain_{strip}", set_gain_variable)
-        print(f"Bound to {PARAMETER_PREFIX_OUT}gain_{strip}")
+        print(f"Bound OUT-{strip} to {PARAMETER_PREFIX_OUT}gain_{strip}")
 
     server = osc_server.ThreadingOSCUDPServer((OSC_SERVER_IP, OSC_SERVER_PORT), disp)
     server_thread = Thread(target=osc_server_serve, daemon=True)
     server_thread.start()
 
-    print("Waiting for VRChat to start.")
+    print("\nWaiting for VRChat to start.")
     while not is_vrchat_running():
         time.sleep(5)
     print("VRChat started!")
