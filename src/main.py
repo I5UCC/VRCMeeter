@@ -12,6 +12,7 @@ from tinyoscquery.utility import get_open_tcp_port, get_open_udp_port, check_if_
 from tinyoscquery.query import OSCQueryBrowser, OSCQueryClient
 from psutil import process_iter
 from threading import Thread, Timer
+import logging
 
 
 class RepeatedTimer(object):
@@ -64,17 +65,17 @@ def is_vrchat_running() -> bool:
 
 def wait_get_oscquery_client():
     service_info = None
-    print("Waiting for VRChat to be discovered.")
+    logging.info("Waiting for VRChat to be discovered.")
     while service_info is None:
         browser = OSCQueryBrowser()
         time.sleep(2) # Wait for discovery
         service_info = browser.find_service_by_name("VRChat")
-    print("VRChat discovered!")
+    logging.info("VRChat discovered!")
     client = OSCQueryClient(service_info)
-    print("Waiting for VRChat to be ready.")
+    logging.info("Waiting for VRChat to be ready.")
     while client.query_node(AVATAR_CHANGE_PARAMETER) is None:
         time.sleep(2)
-    print("VRChat ready!")
+    logging.info("VRChat ready!")
     return client
 
 
@@ -96,12 +97,12 @@ def set_gains():
     for strip in STRIPS_IN:
         if round(vmr.inputs[strip].gain, 1) == gains_in[strip]:
             continue
-        print(f"Setting gain for strip {strip} to {gains_in[strip]}")
+        logging.info(f"Setting gain for strip {strip} to {gains_in[strip]}")
         vmr.inputs[strip].gain = gains_in[strip]
     for strip in STRIPS_OUT:
         if round(vmr.outputs[strip].gain, 1) == gains_out[strip]:
             continue
-        print(f"Setting gain for strip {strip} to {gains_out[strip]}")
+        logging.info(f"Setting gain for strip {strip} to {gains_out[strip]}")
         vmr.outputs[strip].gain = gains_out[strip]
     changed = False
 
@@ -109,10 +110,10 @@ def set_gains():
 def set_profile(addr, value):
     global vmr
     if type(addr) is int:
-        print(f"Setting profile to {PROFILES[addr]}")
+        logging.info(f"Setting profile to {PROFILES[addr]}")
         vmr.load(get_absolute_path(PROFILES[addr]))
     else:
-        print(f"Setting profile to {addr}")
+        logging.info(f"Setting profile to {addr}")
         vmr.load(get_absolute_path(addr))
     time.sleep(1)
     avatar_change(None, None)
@@ -121,7 +122,7 @@ def set_profile(addr, value):
 def avatar_change(addr, value):
     global vmr
 
-    print("Avatar changed/reset...")
+    logging.info("Avatar changed/reset...")
 
     for strip in STRIPS_IN:
         osc_client.send_message(f"{PARAMETER_PREFIX_IN}gain_{strip}", get_float_from_voicemeeter_gain(vmr.inputs[strip].gain))
@@ -130,12 +131,12 @@ def avatar_change(addr, value):
 
 
 def osc_server_serve():
-    print(f"Starting OSC client on {OSC_SERVER_IP}:{OSC_SERVER_PORT}:{HTTP_PORT}\n")
+    logging.info(f"Starting OSC client on {OSC_SERVER_IP}:{OSC_SERVER_PORT}:{HTTP_PORT}")
     server.serve_forever(2)
 
 
 def exit():
-    print("Exiting...")
+    logging.info("Exiting...")
     if vmr:
         vmr.logout()
     if update_timer:
@@ -143,6 +144,9 @@ def exit():
     if oscqs:
         oscqs.stop()
     sys.exit(0)
+
+
+logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s', datefmt='%d-%b-%y %H:%M:%S', handlers=[logging.StreamHandler()])
 
 conf = json.load(open(get_absolute_path('config.json')))
 changed = False
@@ -172,13 +176,13 @@ PARAMETER_PREFIX_IN = "/avatar/parameters/vm_in_"
 PARAMETER_PREFIX_OUT = "/avatar/parameters/vm_out_"
 
 if OSC_SERVER_PORT != 9001:
-    print("OSC Server port is not default, testing port availability and advertising OSCQuery endpoints")
+    logging.info("OSC Server port is not default, testing port availability and advertising OSCQuery endpoints")
     if OSC_SERVER_PORT <= 0 or not check_if_udp_port_open(OSC_SERVER_PORT):
         OSC_SERVER_PORT = get_open_udp_port()
     if HTTP_PORT <= 0 or not check_if_tcp_port_open(HTTP_PORT):
         HTTP_PORT = OSC_SERVER_PORT if check_if_tcp_port_open(OSC_SERVER_PORT) else get_open_tcp_port()
 else:
-    print("OSC Server port is default.")
+    logging.info("OSC Server port is default.")
 
 try:
     vmr = voicemeeter.remote(KIND)
@@ -188,7 +192,7 @@ try:
 except Exception as e:
     if os.name == "nt":
         ctypes.windll.user32.MessageBoxW(0, traceback.format_exc(), "VRCMeeter - Error", 0)
-    print(traceback.format_exc())
+    logging.error(traceback.format_exc())
     exit()
 
 if STRIPS_IN is None or len(STRIPS_IN) == 1 and STRIPS_IN[0] == -1:
@@ -203,8 +207,10 @@ elif len(STRIPS_OUT) == 0:
 
 for strip in STRIPS_IN:
     gains_in[strip] = round(vmr.inputs[strip].gain, 1)
+    logging.debug(f"IN-{strip} gain: {gains_in[strip]}")
 for strip in STRIPS_OUT:
     gains_out[strip] = round(vmr.outputs[strip].gain, 1)
+    logging.debug(f"OUT-{strip} gain: {gains_out[strip]}")
 
 try:
     osc_client = udp_client.SimpleUDPClient(OSC_SERVER_IP, OSC_CLIENT_PORT)
@@ -212,27 +218,27 @@ try:
     disp = dispatcher.Dispatcher()
     disp.map(AVATAR_CHANGE_PARAMETER, avatar_change)
     disp.map(PARAMETER_RESTART, lambda addr, value: vmr.restart())
-    print(f"Bound to {PARAMETER_RESTART}")
+    logging.info(f"Bound restart to {PARAMETER_RESTART}")
     for i in range(len(PROFILES)):
         disp.map(f"{PARAMETER_PREFIX_IN}profile_{i}", lambda addr, value: set_profile(int(addr.split('_')[-1]), value))
-        print(f"Bound profile {PROFILES[i]} to {PARAMETER_PREFIX_IN}profile_{i}")
+        logging.info(f"Bound profile {PROFILES[i]} to {PARAMETER_PREFIX_IN}profile_{i}")
 
     for strip in STRIPS_IN:
         disp.map(f"{PARAMETER_PREFIX_IN}gain_{strip}", set_gain_variable)
-        print(f"Bound IN-{strip} to {PARAMETER_PREFIX_IN}gain_{strip}")
+        logging.info(f"Bound IN-{strip} to {PARAMETER_PREFIX_IN}gain_{strip}")
 
     for strip in STRIPS_OUT:
         disp.map(f"{PARAMETER_PREFIX_OUT}gain_{strip}", set_gain_variable)
-        print(f"Bound OUT-{strip} to {PARAMETER_PREFIX_OUT}gain_{strip}")
+        logging.info(f"Bound OUT-{strip} to {PARAMETER_PREFIX_OUT}gain_{strip}")
 
     server = osc_server.ThreadingOSCUDPServer((OSC_SERVER_IP, OSC_SERVER_PORT), disp)
     server_thread = Thread(target=osc_server_serve, daemon=True)
     server_thread.start()
 
-    print("\nWaiting for VRChat to start.")
+    logging.info("Waiting for VRChat to start.")
     while not is_vrchat_running():
         time.sleep(5)
-    print("VRChat started!")
+    logging.info("VRChat started!")
     qclient = wait_get_oscquery_client()
     oscqs = OSCQueryService("VoicemeeterControl", HTTP_PORT, OSC_SERVER_PORT)
     oscqs.advertise_endpoint(AVATAR_CHANGE_PARAMETER, access="readwrite")
@@ -255,19 +261,19 @@ try:
     while is_vrchat_running():
         time.sleep(5)
 
-    print("VRChat closed, exiting.")
+    logging.info("VRChat closed, exiting.")
     exit()
 except OSError as e:
     if os.name == "nt":
         ctypes.windll.user32.MessageBoxW(0, "You can only bind to the port 9001 once.", "VRCMeeter - Error", 0)
     exit()
 except zeroconf._exceptions.NonUniqueNameException as e:
-    print("NonUniqueNameException, trying again...")
+    logging.error("NonUniqueNameException, trying again...")
     os.execv(sys.executable, ['python'] + sys.argv)
 except KeyboardInterrupt:
     exit()
 except Exception as e:
     if os.name == "nt":
         ctypes.windll.user32.MessageBoxW(0, traceback.format_exc(), "VRCMeeter - Unexpected Error", 0)
-    print(traceback.format_exc())
+    logging.error(traceback.format_exc())
     exit()
