@@ -182,7 +182,7 @@ try:
     vmr.login()
 except Exception as e:
     if os.name == "nt":
-        ctypes.windll.user32.MessageBoxW(0, traceback.format_exc(), "VRCVoiceMeeterControl - Error", 0)
+        ctypes.windll.user32.MessageBoxW(0, traceback.format_exc(), "VRCMeeter - Error", 0)
     print(traceback.format_exc())
     exit()
 
@@ -256,7 +256,7 @@ try:
     exit()
 except OSError as e:
     if os.name == "nt":
-        ctypes.windll.user32.MessageBoxW(0, "You can only bind to the port 9001 once.", "VRCVoiceMeeterControl - Error", 0)
+        ctypes.windll.user32.MessageBoxW(0, "You can only bind to the port 9001 once.", "VRCMeeter - Error", 0)
     exit()
 except zeroconf._exceptions.NonUniqueNameException as e:
     print("NonUniqueNameException, trying again...")
@@ -265,6 +265,6 @@ except KeyboardInterrupt:
     exit()
 except Exception as e:
     if os.name == "nt":
-        ctypes.windll.user32.MessageBoxW(0, traceback.format_exc(), "VRCVoiceMeeterControl - Unexpected Error", 0)
+        ctypes.windll.user32.MessageBoxW(0, traceback.format_exc(), "VRCMeeter - Unexpected Error", 0)
     print(traceback.format_exc())
     exit()
