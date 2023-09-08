@@ -108,9 +108,12 @@ def set_gains():
 
 def set_profile(addr, value):
     global vmr
-    profile = int(addr.split('_')[-1])
-    print(f"Setting profile to {PROFILES[profile]}")
-    vmr.load(get_absolute_path(PROFILES[profile]))
+    if type(addr) is int:
+        print(f"Setting profile to {PROFILES[addr]}")
+        vmr.load(get_absolute_path(PROFILES[addr]))
+    else:
+        print(f"Setting profile to {addr}")
+        vmr.load(get_absolute_path(addr))
     time.sleep(1)
     avatar_change(None, None)
 
@@ -180,6 +183,8 @@ else:
 try:
     vmr = voicemeeter.remote(KIND)
     vmr.login()
+    if conf["startup_profile"] is not None and conf["startup_profile"] != "":
+        set_profile(conf["startup_profile"], None)
 except Exception as e:
     if os.name == "nt":
         ctypes.windll.user32.MessageBoxW(0, traceback.format_exc(), "VRCMeeter - Error", 0)
@@ -211,7 +216,7 @@ try:
     disp.map(PARAMETER_RESTART, lambda addr, value: vmr.restart())
     print(f"Bound to {PARAMETER_RESTART}")
     for i in range(len(PROFILES)):
-        disp.map(f"{PARAMETER_PREFIX_IN}profile_{i}", set_profile)
+        disp.map(f"{PARAMETER_PREFIX_IN}profile_{i}", lambda addr, value: set_profile(int(addr.split('_')[-1]), value))
         print(f"Bound to {PARAMETER_PREFIX_IN}profile_{i}")
 
     for strip in STRIPS_IN:

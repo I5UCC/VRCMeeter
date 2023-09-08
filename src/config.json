@@ -8,5 +8,6 @@
     "voicemeeter_type": "potato",
     "strips_in": [],
     "strips_out": [],
-    "profiles": []
+    "profiles": [],
+    "startup_profile": ""
 }
