@@ -1,4 +1,4 @@
 
 
-https://github.com/I5UCC/VRCVoiceMeeterControl/assets/43730681/102d2ed8-405d-46fb-9143-5f8cbfe6485a
+https://github.com/I5UCC/VRCVoiceMeeterControl/assets/43730681/d8f16c9c-84de-4aa2-820f-de59572e04fa
 
