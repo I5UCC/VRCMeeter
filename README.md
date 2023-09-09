@@ -45,18 +45,18 @@ I also want to be able to load one of my profiles called vr.xml, so i add that t
 
 Now after running the program, it shows me the parameters it has bound now:
 
-![image](https://github.com/I5UCC/VRCMeeter/assets/43730681/ace90aa7-a0f4-45d8-8c73-b73805ca98a7)
+![image](https://github.com/I5UCC/VRCMeeter/assets/43730681/bfc8479a-507b-4ddc-8dc8-1324c001b7f0)
 
 Now i need to add these Parameters to my VRChat avatar. To do that you open the avatars expression parameters and add as many lines as you need:
 
-![image](https://github.com/I5UCC/VRCMeeter/assets/43730681/f658a2a4-9a41-4f28-8fe8-7870423af95d)
+![image](https://github.com/I5UCC/VRCMeeter/assets/43730681/ffe05722-8763-426a-9482-a2ac45ef9ff2)
 
 If you don't want to waste Parameter space of your avatar, make sure they are not synced (last checkbox on the right unticked). <br>
 For parameters that control the gain of a strip, choose the parameter type ***float*** for anything else choose ***bool***
 
 Now you need to add these Parameters to your expression Menu:
 
-![image](https://github.com/I5UCC/VRCMeeter/assets/43730681/54a20849-8daa-4268-a9c4-521b690490ea)
+![image](https://github.com/I5UCC/VRCMeeter/assets/43730681/71fe16ab-38eb-43bb-aa4e-935e1affa6cb)
 
 For every parameter that is a ***bool***, set the type to ***button***, for every ***float*** parameter set it to ***radial puppet*** 
 
