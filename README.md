@@ -22,3 +22,47 @@ Currently this program only supports controlling gains of any input/output slide
 | strips_out | Indices of ***output*** strips to bind to a VRChat parameter. If left empty, every available strip gets bound. If the only value is -1, no strips will be bound. |
 | profiles | Array of Profiles that can be bound to VRChat parameters. Use the full name of the xml file, not the path, and have the xml file placed in the same folder as the executable. |
 | startup_profile | Profile to load at the startup of this program, leave empty if not needed. |
+
+After setting up the programs settings to your liking, you need to add the bound parameters to VRChat. Here is an example on how that works:
+I only want to control the trips 5, 6 and 7 in Voicemeeter Potato:
+
+![image](https://github.com/I5UCC/VRCMeeter/assets/43730681/47da8ace-ade1-42e0-ac98-54ff8b343d2e)
+
+As i am using Voicemeeter Potato, i set the `voicemeeter_type` setting in the `config.json` file to potato:
+
+`"voicemeeter_type": "potato",`
+
+So we add those to the `config.json` file, and set the stips_out to -1, as we dont need them:
+
+```
+"strips_in": [5, 6, 7],
+"strips_out": [-1],
+```
+
+I also want to be able to load one of my profiles called vr.xml, so i add that to my config:
+
+`"profiles": ["vr.xml"],`
+
+Now after running the program, it shows me the parameters it has bound now:
+
+![image](https://github.com/I5UCC/VRCMeeter/assets/43730681/ace90aa7-a0f4-45d8-8c73-b73805ca98a7)
+
+Now i need to add these Parameters to my VRChat avatar. To do that you open the avatars expression parameters and add as many lines as you need:
+
+![image](https://github.com/I5UCC/VRCMeeter/assets/43730681/f658a2a4-9a41-4f28-8fe8-7870423af95d)
+
+If you don't want to waste Parameter space of your avatar, make sure they are not synced (last checkbox on the right unticked). <br>
+For parameters that control the gain of a strip, choose the parameter type ***float*** for anything else choose ***bool***
+
+Now you need to add these Parameters to your expression Menu:
+
+![image](https://github.com/I5UCC/VRCMeeter/assets/43730681/54a20849-8daa-4268-a9c4-521b690490ea)
+
+For every parameter that is a ***bool***, set the type to ***button***, for every ***float*** parameter set it to ***radial puppet*** 
+
+Aaaaaand you are done! You best reset your OSC Configuration after updating an existing avatar with those parameters. You can do that as follows:
+- Close VRChat.
+- Open 'Run' in Windows (Windows Key + R)
+- Type in `%APPDATA%\..\LocalLow\VRChat\VRChat\OSC`
+- Delete the folders that start with 'usr_*'.
+- Startup VRChat again and it should work.
