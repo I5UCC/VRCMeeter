@@ -7,7 +7,7 @@ build_exe_options = {"packages": packages, "include_files": file_include, 'inclu
 
 setup(
     name="VRCMeeter",
-    version="0.1",
+    version="0.2",
     description="Lets you control Voicemeeter from within VRChat over OSC",
     options={"build_exe": build_exe_options},
     executables=[Executable("main.py", target_name="VRCMeeter.exe", base=False), Executable("main.py", target_name="VRCMeeter_NoConsole.exe", base="Win32GUI")],
