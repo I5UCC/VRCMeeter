@@ -13,6 +13,7 @@ from tinyoscquery.query import OSCQueryBrowser, OSCQueryClient
 from psutil import process_iter
 from threading import Thread, Timer
 import logging
+import openvr
 
 
 class RepeatedTimer(object):
@@ -174,6 +175,7 @@ AVATAR_CHANGE_PARAMETER = "/avatar/change"
 PARAMETER_RESTART = "/avatar/parameters/vm_restart"
 PARAMETER_PREFIX_IN = "/avatar/parameters/vm_in_"
 PARAMETER_PREFIX_OUT = "/avatar/parameters/vm_out_"
+PARAMETER_PREFIX_PROFILE = "/avatar/parameters/vm_profile_"
 
 if OSC_SERVER_PORT != 9001:
     logging.info("OSC Server port is not default, testing port availability and advertising OSCQuery endpoints")
@@ -185,8 +187,12 @@ else:
     logging.info("OSC Server port is default.")
 
 try:
+    application = openvr.init(openvr.VRApplication_Utility)
+    openvr.VRApplications().addApplicationManifest(get_absolute_path("app.vrmanifest"))
+    logging.info("Added VRManifest.")
     vmr = voicemeeter.remote(KIND)
     vmr.login()
+    logging.info("Logged in to Voicemeeter.")
     if conf["startup_profile"] is not None and conf["startup_profile"] != "":
         set_profile(conf["startup_profile"], None)
 except Exception as e:
@@ -220,8 +226,8 @@ try:
     disp.map(PARAMETER_RESTART, lambda addr, value: vmr.restart())
     logging.info(f"Bound restart to {PARAMETER_RESTART}")
     for i in range(len(PROFILES)):
-        disp.map(f"{PARAMETER_PREFIX_IN}profile_{i}", lambda addr, value: set_profile(int(addr.split('_')[-1]), value))
-        logging.info(f"Bound profile {PROFILES[i]} to {PARAMETER_PREFIX_IN}profile_{i}")
+        disp.map(f"{PARAMETER_PREFIX_PROFILE}{i}", lambda addr, value: set_profile(int(addr.split('_')[-1]), value))
+        logging.info(f"Bound profile {PROFILES[i]} to {PARAMETER_PREFIX_PROFILE}{i}")
 
     for strip in STRIPS_IN:
         disp.map(f"{PARAMETER_PREFIX_IN}gain_{strip}", set_gain_variable)
@@ -244,7 +250,7 @@ try:
     oscqs.advertise_endpoint(AVATAR_CHANGE_PARAMETER, access="readwrite")
     oscqs.advertise_endpoint(PARAMETER_RESTART, access="readwrite")
     for i in range(len(PROFILES)):
-        oscqs.advertise_endpoint(f"{PARAMETER_PREFIX_IN}profile_{i}", access="readwrite")
+        oscqs.advertise_endpoint(f"{PARAMETER_PREFIX_PROFILE}{i}", access="readwrite")
 
     for strip in STRIPS_IN:
         oscqs.advertise_endpoint(f"{PARAMETER_PREFIX_IN}gain_{strip}", access="readwrite")

@@ -3,3 +3,4 @@ zeroconf
 requests
 psutil
 toml
+openvr
