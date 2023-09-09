@@ -245,7 +245,7 @@ try:
         disp.map(f"{PARAMETER_PREFIX_OUT}gain_{strip}", set_gain_variable_out)
         logging.info(f"Bound OUT-{strip} to {PARAMETER_PREFIX_OUT}gain_{strip}")
 
-    server = osc_server.ThreadingOSCUDPServer((OSC_SERVER_IP, OSC_SERVER_PORT), disp)
+    server = osc_server.BlockingOSCUDPServer((OSC_SERVER_IP, OSC_SERVER_PORT), disp)
     server_thread = Thread(target=osc_server_serve, daemon=True)
     server_thread.start()
 
