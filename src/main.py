@@ -80,11 +80,18 @@ def wait_get_oscquery_client():
     return client
 
 
-def set_gain_variable(addr, value):
+def set_gain_variable_in(addr, value):
     global gains_in, changed
     strip = int(addr.split('_')[-1])
     gain = get_voicemeeter_gain_from_float(float(value))
     gains_in[strip] = round(gain, 1)
+    changed = True
+
+def set_gain_variable_out(addr, value):
+    global gains_in, changed
+    strip = int(addr.split('_')[-1])
+    gain = get_voicemeeter_gain_from_float(float(value))
+    gains_out[strip] = round(gain, 1)
     changed = True
 
 
@@ -230,11 +237,11 @@ try:
         logging.info(f"Bound profile {PROFILES[i]} to {PARAMETER_PREFIX_PROFILE}{i}")
 
     for strip in STRIPS_IN:
-        disp.map(f"{PARAMETER_PREFIX_IN}gain_{strip}", set_gain_variable)
+        disp.map(f"{PARAMETER_PREFIX_IN}gain_{strip}", set_gain_variable_in)
         logging.info(f"Bound IN-{strip} to {PARAMETER_PREFIX_IN}gain_{strip}")
 
     for strip in STRIPS_OUT:
-        disp.map(f"{PARAMETER_PREFIX_OUT}gain_{strip}", set_gain_variable)
+        disp.map(f"{PARAMETER_PREFIX_OUT}gain_{strip}", set_gain_variable_out)
         logging.info(f"Bound OUT-{strip} to {PARAMETER_PREFIX_OUT}gain_{strip}")
 
     server = osc_server.ThreadingOSCUDPServer((OSC_SERVER_IP, OSC_SERVER_PORT), disp)
