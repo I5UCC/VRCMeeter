@@ -88,7 +88,7 @@ def set_gain_variable_in(addr, value):
     changed = True
 
 def set_gain_variable_out(addr, value):
-    global gains_in, changed
+    global gains_out, changed
     strip = int(addr.split('_')[-1])
     gain = get_voicemeeter_gain_from_float(float(value))
     gains_out[strip] = round(gain, 1)
