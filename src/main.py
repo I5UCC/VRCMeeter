@@ -87,6 +87,7 @@ def set_gain_variable_in(addr, value):
     gains_in[strip] = round(gain, 1)
     changed = True
 
+
 def set_gain_variable_out(addr, value):
     global gains_out, changed
     strip = int(addr.split('_')[-1])
